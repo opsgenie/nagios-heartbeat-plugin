@@ -4,75 +4,41 @@ import (
 	"bytes"
 	"encoding/json"
 	"flag"
-	"net/http"
-	"net"
-	"time"
-	"os"
 	"fmt"
 	"io/ioutil"
+	"net"
+	"net/http"
+	"os"
+	"time"
 )
 
-var TIMEOUT = 30
-var parameters = make(map[string]string)
-var configParameters = map[string]string{"apiUrl" : "https://api.opsgenie.com"}
+const TIMEOUT = 30
 
-func main() {
-	parseFlags()
-	http_post()
-}
+var (
+	APIURL     = "https://api.opsgenie.com"
+	parameters = make(map[string]string)
+)
 
-func parseFlags()map[string]string{
-	apiKey := flag.String("apiKey","", "api key")
-	name := flag.String("name","", "heartbeat name")
-	apiUrl := flag.String("apiUrl","", "api url")
+func init() {
+	apiKey := flag.String("apiKey", "", "api key")
+	name := flag.String("name", "", "heartbeat name")
+	apiURL := flag.String("apiUrl", "", "api url")
 
 	flag.Parse()
 
+	if *apiURL != "" {
+		APIURL = *apiURL
+	}
+
 	parameters["apiKey"] = *apiKey
 	parameters["name"] = *name
-
-	if *apiUrl != ""{
-		configParameters["apiUrl"] = *apiUrl
-	}
-
-	return parameters
 }
 
-func http_post()  {
-	var buf, _ = json.Marshal(parameters)
-	body := bytes.NewBuffer(buf)
-
-	request, _ := http.NewRequest("POST", configParameters["apiUrl"] + "/v2/heartbeats/"+ configParameters["name"] +"/ping", body)
-	request.Header("Authorization", "GenieKey " + configParameters["apiKey"])
-	client := getHttpClient(TIMEOUT)
-
-	resp, error := client.Do(request)
-	if error == nil {
-		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
-		if err == nil{
-			if(resp.StatusCode > 199 && resp.StatusCode < 400){
-				fmt.Fprintln(os.Stdout, "OK - successfully sent heartbeat to opsgenie")
-				os.Exit(0) // OK
-			}else{
-				fmt.Fprintln(os.Stdout, "Opsgenie response:" + string(body[:]))
-				os.Exit(1) // warning
-			}
-		}else{
-			fmt.Fprintln(os.Stdout, "Couldn't read the response from opsgenie", err)
-			os.Exit(1) // warning
-		}
-	}else{
-		fmt.Fprintln(os.Stdout, "couldn't send heartbeat to opsgenie", error)
-		os.Exit(2) // critical
-	}
-}
-
-func getHttpClient (seconds int) *http.Client{
+func getHTTPClient(seconds int) *http.Client {
 	client := &http.Client{
 		Transport: &http.Transport{
 			Dial: func(netw, addr string) (net.Conn, error) {
-				conn, err := net.DialTimeout(netw, addr, time.Second * time.Duration(seconds))
+				conn, err := net.DialTimeout(netw, addr, time.Second*time.Duration(seconds))
 				if err != nil {
 					return nil, err
 				}
@@ -82,4 +48,49 @@ func getHttpClient (seconds int) *http.Client{
 		},
 	}
 	return client
+}
+
+func main() {
+	var buf, err = json.Marshal(parameters)
+	if err != nil {
+		fmt.Fprintln(os.Stdout, err.Error())
+		os.Exit(2)
+	}
+
+	requestBody := bytes.NewBuffer(buf)
+
+	requestURL := fmt.Sprintf("%s/v2/heartbeats/%s/ping", APIURL, parameters["name"])
+
+	request, err := http.NewRequest("POST", requestURL, requestBody)
+	if err != nil {
+		fmt.Fprintln(os.Stdout, err)
+		os.Exit(2)
+	}
+
+	request.Header.Add("Authorization", fmt.Sprintf("GenieKey %s", parameters["apiKey"]))
+
+	client := getHTTPClient(TIMEOUT)
+
+	resp, err := client.Do(request)
+	if err != nil {
+		fmt.Fprintln(os.Stdout, "couldn't send heartbeat to opsgenie", err)
+		os.Exit(2)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Fprintln(os.Stdout, "Couldn't read the response from opsgenie", err)
+		os.Exit(1)
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode > 199 && resp.StatusCode < 400 {
+		fmt.Fprintln(os.Stdout, "OK - successfully sent heartbeat to opsgenie")
+		os.Exit(0)
+	} else {
+		fmt.Fprintln(os.Stdout, "Opsgenie response:"+string(body[:]))
+		os.Exit(1)
+	}
+
 }
