@@ -43,7 +43,7 @@ func http_post()  {
 	body := bytes.NewBuffer(buf)
 
 	request, _ := http.NewRequest("POST", configParameters["apiUrl"] + "/v2/heartbeats/"+ configParameters["name"] +"/ping", body)
-	request.Header("Authorization", "GenieKey " + configParameters["apiKey"])
+	request.Header.Add("Authorization", "GenieKey " + configParameters["apiKey"])
 	client := getHttpClient(TIMEOUT)
 
 	resp, error := client.Do(request)
