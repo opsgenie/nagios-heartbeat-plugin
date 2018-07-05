@@ -3,10 +3,16 @@
 OpsGenie heartbeat plugin that can be used in Nagios; with Linux and Windows distributions.
 
 1- Please [create an OpsGenie account](https://www.opsgenie.com/#signup) if you haven't done already.
+
 2- Add a heartbeat in OpsGenie [Heartbeats page](https://opsgenie.com/heartbeat).
-3- Create a OpsGenie Heartbeat integration from [Integrations](https://opsgenie.com/integration?add=Heartbeat) page and copy its Api key.
-4- Download the binary file, _heartbeat_ (provided below), into your Nagios libexec directory.
-5- In Nagios, define a command like so: 
+
+3- Create a Heartbeat from [Heartbeats](https://app.opsgenie.com/heartbeat) page. 
+
+4- Copy api key of Default API integration.
+
+5- Download the binary file, _heartbeat_ (provided below), into your Nagios libexec directory.
+
+6- In Nagios, define a command like so: 
 
 ```
 define command{
@@ -15,7 +21,7 @@ define command{
 }
 ```
 
-6- Define a service that will run the command like so:
+7- Define a service that will run the command like so:
 
 ```
 define service {
