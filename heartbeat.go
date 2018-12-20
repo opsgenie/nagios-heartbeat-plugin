@@ -71,6 +71,7 @@ func http_post()  {
 func getHttpClient (seconds int) *http.Client{
 	client := &http.Client{
 		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
 			Dial: func(netw, addr string) (net.Conn, error) {
 				conn, err := net.DialTimeout(netw, addr, time.Second * time.Duration(seconds))
 				if err != nil {
